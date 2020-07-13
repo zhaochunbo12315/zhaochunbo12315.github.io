@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cy.pj.sys.dao.SysUserDao">
+
+    <update id="updateObject"
+            parameterType="com.cy.pj.sys.entity.SysUser">
+        update sys_users
+        set username=#{username},
+        mobile=#{mobile},
+        email=#{email},
+        deptId=#{deptId},
+        modifiedTime=now(),
+        modifiedUser=#{modifiedUser}
+        where id=#{id}
+    </update>
+
+    <select id="findObjectById"
+            resultMap="sysUserDeptVo">
+        select *
+        from sys_users
+        where id=#{id}
+    </select>
+    <insert id="insertObject"
+            parameterType="com.cy.pj.sys.entity.SysUser"
+            useGeneratedKeys="true"
+            keyProperty="id">
+
+        insert into sys_users
+        (username,password,deptId,email,mobile,salt,valid,
+        createdTime,modifiedTime,createdUser,modifiedUser)
+        values
+        (#{username},#{password},#{deptId},#{email},#{mobile},#{salt},#{valid},
+        now(),now(),#{createdUser},#{modifiedUser})
+
+    </insert>
+
+    <sql id="queryWhereId">
+        from sys_users
+        <where>
+            <if test="username!=null and username!=''">
+                username like concat("%",#{username},"%")
+            </if>
+        </where>
+    </sql>
+    <!-- 基于条件查询日志表中的记录总数 -->
+    <select id="getRowCount"
+            resultType="int">
+        select count(*)
+        <include refid="queryWhereId"/>
+    </select>
+    <!-- 基于resultMap元素定义高级映射，此元素定义用户查询的映射方式 -->
+    <resultMap type="com.cy.pj.sys.vo.SysUserDeptVo"
+               id="sysUserDeptVo">
+        <!--association 应用resultMap中的 many2one或者one2one查询 ，在当前应用中
+                                我们要基于查询到的部门id(deptId)再次查询用户所属的部门信息，最终将部门信息封装到
+         SysUserDeptVo对象的sysDept属性上-->
+        <association property="sysDept"
+                     column="deptId"
+                     select="com.cy.pj.sys.dao.SysDeptDao.findById">
+        </association>
+    </resultMap>
+    <!-- 基于条件查询当前页用户记录信息并基于查询到的部门id继续查询部门信息 -->
+    <select id="findPageObjects" resultMap="sysUserDeptVo">
+        select *
+        <include refid="queryWhereId"/>
+        order by createdTime desc
+        limit #{startIndex},#{pageSize}
+    </select>
+</mapper>
